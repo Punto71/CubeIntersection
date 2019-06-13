@@ -63,7 +63,7 @@ namespace CubeIntersection {
             if (e.Result != null) {
                 MessageList.Text = e.Result.ToString();
             }
-            RunButton.IsEnabled = true;
+            NxTextBox.IsEnabled = NyTextBox.IsEnabled = NzTextBox.IsEnabled = RunButton.IsEnabled = true;
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace CubeIntersection {
         private void RunButtonClick(object sender, RoutedEventArgs e) {
             if (_cube != null) {
                 MessageList.Text = "Запуск поиска связанных областей...";
-                RunButton.IsEnabled = false;
+                NxTextBox.IsEnabled = NyTextBox.IsEnabled = NzTextBox.IsEnabled = RunButton.IsEnabled = false;
                 _intersectWorker.RunWorkerAsync(_cube);
             }
         }
