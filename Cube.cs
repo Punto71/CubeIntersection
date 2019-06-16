@@ -78,8 +78,8 @@ namespace CubeIntersection {
         /// </summary>
         /// <param name="file">Файл для записи</param>
         /// <returns>количество связанных областей</returns>
-        public int WriteCubeIntersectionToFile(StreamWriter file) {
-            var count = GetCubeIntersection(file, null);
+        public int WriteCubeIntersectionToFile(StreamWriter file = null) {
+            var count = GetCubeIntersection(file);
             return count;
         }
 

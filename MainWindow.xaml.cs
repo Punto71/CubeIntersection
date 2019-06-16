@@ -45,16 +45,21 @@ namespace CubeIntersection {
         /// Асинхронный запуск поиска связанных областей
         /// </summary>
         void RunCheckIntersection(object sender, DoWorkEventArgs e) {
-            var cube = e.Argument as Cube;
-            if (cube != null) {
+            if (e.Argument != null && e.Argument is KeyValuePair<Cube, bool>) {
+                var cubeInfo = (KeyValuePair<Cube, bool>)e.Argument;
                 var timer = DateTime.Now;
                 int result = 0;
-                using (var writer = new StreamWriter("out.txt")) {
-                    result = cube.WriteCubeIntersectionToFile(writer);
+                if (cubeInfo.Value) {
+                    using (var writer = new StreamWriter("out.txt")) {
+                        result = cubeInfo.Key.WriteCubeIntersectionToFile(writer);
+                    }
+                } else {
+                    result = cubeInfo.Key.WriteCubeIntersectionToFile(null);
                 }
                 var time = DateTime.Now - timer;
-                e.Result = "Время выполнения: " + time + "\r\nКоличество связанных областей: " + result +
-                    "\r\nНомера ячеек находятся в файле out.txt";
+                e.Result = "Время выполнения: " + time + "\r\nКоличество связанных областей: " + result;
+                if (cubeInfo.Value)
+                    e.Result += "\r\nНомера ячеек находятся в файле out.txt";
             }
         }
 
@@ -65,7 +70,7 @@ namespace CubeIntersection {
             if (e.Result != null) {
                 MessageList.Text = e.Result.ToString();
             }
-            NxTextBox.IsEnabled = NyTextBox.IsEnabled = NzTextBox.IsEnabled = RunButton.IsEnabled = true;
+            SaveToFileCheckBox.IsEnabled = NxTextBox.IsEnabled = NyTextBox.IsEnabled = NzTextBox.IsEnabled = RunButton.IsEnabled = true;
         }
 
         /// <summary>
@@ -102,8 +107,8 @@ namespace CubeIntersection {
         private void RunButtonClick(object sender, RoutedEventArgs e) {
             if (_cube != null) {
                 MessageList.Text = "Запуск поиска связанных областей...";
-                NxTextBox.IsEnabled = NyTextBox.IsEnabled = NzTextBox.IsEnabled = RunButton.IsEnabled = false;
-                _intersectWorker.RunWorkerAsync(_cube);
+                SaveToFileCheckBox.IsEnabled = NxTextBox.IsEnabled = NyTextBox.IsEnabled = NzTextBox.IsEnabled = RunButton.IsEnabled = false;
+                _intersectWorker.RunWorkerAsync(new KeyValuePair<Cube, bool>(_cube, SaveToFileCheckBox.IsChecked == true));
             }
         }
 

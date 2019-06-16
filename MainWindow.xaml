@@ -8,9 +8,9 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="10"/>
-            <ColumnDefinition Width="100"/>
+            <ColumnDefinition Width="160"/>
             <ColumnDefinition Width="10"/>
-            <ColumnDefinition Width="100"/>
+            <ColumnDefinition Width="50"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="25"/>
@@ -21,15 +21,19 @@
             <RowDefinition Height="8"/>
             <RowDefinition Height="25"/>
             <RowDefinition Height="8"/>
+            <RowDefinition Height="25"/>
+            <RowDefinition Height="8"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <Button x:Name="RunButton" Content="Run" Grid.Column="2" Grid.ColumnSpan="3" Grid.Row="6" Width="75" Click="RunButtonClick"/>
+        <Button x:Name="RunButton" Content="Run" Grid.Column="2" Grid.ColumnSpan="3" Grid.Row="8" Width="75" Click="RunButtonClick"/>
         <TextBox x:Name="NxTextBox" Text="400" Grid.Column="4" TextChanged="CubeSettingsChanged"/>
         <TextBox x:Name="NyTextBox" Text="250" Grid.Column="4" Grid.Row="2" TextChanged="CubeSettingsChanged"/>
         <TextBox x:Name="NzTextBox" Text="100" Grid.Column="4" Grid.Row="4" TextChanged="CubeSettingsChanged"/>
         <Label Grid.Column="2" Content="Размеры I (Nx)"/>
         <Label Grid.Column="2" Grid.Row="2" Content="Размеры J (Ny)"/>
         <Label Grid.Column="2" Grid.Row="4" Content="Размеры K (Nz)"/>
+        <Label Grid.Column="2" Grid.Row="6" Content="Запись результата в файл"/>
         <TextBlock x:Name="MessageList"  Grid.Column="0" Grid.Row="0" Grid.RowSpan="9" ScrollViewer.HorizontalScrollBarVisibility="Disabled" TextTrimming="WordEllipsis" TextWrapping="Wrap"/>
+        <CheckBox x:Name="SaveToFileCheckBox" IsChecked="False" Content="" Grid.Column="4" HorizontalAlignment="Center" Grid.Row="6" VerticalAlignment="Center"/>
     </Grid>
 </Window>
