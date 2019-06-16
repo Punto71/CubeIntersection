@@ -44,9 +44,11 @@ namespace CubeIntersection {
         /// <summary>
         /// Заполнение куба рандомными значениями
         /// </summary>
-        public void FillCubeRandom() {
+        public void FillCubeRandom(BackgroundWorker worker) {
             var random = new Random();
             for (int i = 0; i < _mass.Length; i++) {
+                if (worker.CancellationPending)
+                    break;
                 var number = random.Next(0, RANDOM_NUM);
                 _mass[i] = number < RANDOM_NUM / 2 ? 0 : 1;
             }
@@ -63,81 +65,11 @@ namespace CubeIntersection {
         }
 
         /// <summary>
-        /// Проверка связанности ячейки в трех направлениях
-        /// </summary>
-        /// <param name="cellIndex">индекс ячейки массива (начинается с 0)</param>
-        /// <param name="xIndex">индекс связанной ячейки по оси x (или 0)</param>
-        /// <param name="yIndex">индекс связанной ячейки по оси y (или 0)</param>
-        /// <param name="zIndex">индекс связанной ячейки по оси z (или 0)</param>
-        /// <returns>ячейка связанна с другими ячейками по одному из направлений</returns>
-        private bool CellHasIntersect(int cellIndex, ref int xIndex,ref int yIndex,ref int zIndex) {
-            if (cellIndex + 1 <= _mass.Length) {
-                var result = CheckCellByX(cellIndex, ref xIndex);
-                result = CheckCellByY(cellIndex, ref yIndex) || result;
-                result = CheckCellByZ(cellIndex, ref zIndex) || result;
-                return result;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Проверка связанности ячейки направлении x
-        /// </summary>
-        /// <param name="index">индекс ячейки массива (начинается с 0)</param>
-        /// <param name="equalsIndex">индекс связанной ячейки по оси x (или 0)</param>
-        private bool CheckCellByX(int index, ref int equalsIndex) {
-            var nextIndex = index + 1;
-            if (nextIndex % _x > 0) {
-                var value = _mass[index];
-                var result = value == _mass[nextIndex];
-                if (result)
-                    equalsIndex = nextIndex;
-                return result;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Проверка связанности ячейки направлении y
-        /// </summary>
-        /// <param name="index">индекс ячейки массива (начинается с 0)</param>
-        /// <param name="equalsIndex">индекс связанной ячейки по оси y (или 0)</param>
-        private bool CheckCellByY(int index, ref int equalsIndex) {
-            var nextIndex = index + 1;
-            if (nextIndex % (_xy) > 0 && nextIndex < _mass.Length - _x) {
-                var value = _mass[index];
-                equalsIndex = index + _x;
-                var result = value == _mass[equalsIndex];
-                if (!result)
-                    equalsIndex = 0;
-                return result;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Проверка связанности ячейки направлении z
-        /// </summary>
-        /// <param name="index">индекс ячейки массива (начинается с 0)</param>
-        /// <param name="equalsIndex">индекс связанной ячейки по оси z (или 0)</param>
-        private bool CheckCellByZ(int index, ref int equalsIndex) {
-            if (index < _xyz) {
-                var value = _mass[index];
-                equalsIndex = index + _xy;
-                var result = value == _mass[equalsIndex];
-                if (!result)
-                    equalsIndex = 0;
-                return result;
-            }
-            return false;
-        }
-
-        /// <summary>
         /// Получение списка связанных областей в виде словаря [номер области, номера ячеек в области]
         /// </summary>
         public Dictionary<int, HashSet<int>> GetCubeIntersection() {
-            var result = new Dictionary<int,HashSet<int>>();
-            var groupList = FindCubeIntersection(null, result);
+            var result = new Dictionary<int, HashSet<int>>();
+            GetCubeIntersection(null, result);
             return result;
         }
 
@@ -146,56 +78,92 @@ namespace CubeIntersection {
         /// </summary>
         /// <param name="file">Файл для записи</param>
         /// <returns>количество связанных областей</returns>
-        public int GetCubeIntersection(StreamWriter file) {
-            var result = FindCubeIntersection(file);
-            return result;
+        public int WriteCubeIntersectionToFile(StreamWriter file) {
+            var count = GetCubeIntersection(file, null);
+            return count;
         }
 
-        /// <summary>
-        /// Поиск связанных областей в кубе и запись результата в файл или в коллекцию  
-        /// </summary>
-        /// <param name="file">файл</param>
-        /// <param name="collection">коллекция</param>
-        /// <returns>количество связанных областей</returns>
-        private int FindCubeIntersection(StreamWriter file = null, Dictionary<int, HashSet<int>> collection = null) {
+        public int GetCubeIntersection(StreamWriter file = null, Dictionary<int, HashSet<int>> collection = null) {
+            int groupCount = 0;
             var checkedList = new HashSet<int>();
-            var groupCount = 0;
             for (int i = 0; i < _mass.Length; i++) {
-                var res = new HashSet<int>();
-                if (CheckCubeIntersection(i, checkedList, res)) {
-                    if (collection != null)
-                        collection.Add(groupCount, res);
-                    if (file != null)
-                        file.Write("Область №" + (groupCount + 1) + ": " + string.Join(", ", res));
-                    groupCount++;
+                if (_mass[i] == 1 && !checkedList.Contains(i)) {
+                    var result = new HashSet<int>();
+                    GetCellIntersercion(i, checkedList, result);
+                    if (result.Count > 1) {
+                        if (collection != null)
+                            collection.Add(groupCount, result);
+                        if (file != null)
+                            file.Write("Область №" + (groupCount + 1) + ": " + string.Join(", ", result));
+                        groupCount++;
+                    }
                 }
             }
             return groupCount;
         }
 
-        /// <summary>
-        /// Рекурсивная проверка ячеек на связанность по трем направлениям
-        /// </summary>
-        /// <param name="index">индекс ячейки (начинается с 0)</param>
-        /// <param name="checkedList">список уже проверенных ячеек</param>
-        /// <param name="result">список связанных ячеек в текущей области</param>
-        /// <returns>ячейка связанна с хотя бы одной другой ячейкой</returns>
-        private bool CheckCubeIntersection(int index, HashSet<int> checkedList, HashSet<int> result) {
-            if (_mass[index] == 1 && !checkedList.Contains(index)) {
-                checkedList.Add(index);
-                result.Add(index);
-                int xIntersect = 0, yIntersect = 0, zIntersect = 0;
-                if (CellHasIntersect(index, ref xIntersect, ref yIntersect, ref zIntersect)) {
-                    if (xIntersect > 0)
-                        CheckCubeIntersection(xIntersect, checkedList, result);
-                    if (yIntersect > 0)
-                        CheckCubeIntersection(yIntersect, checkedList, result);
-                    if (zIntersect > 0)
-                        CheckCubeIntersection(zIntersect, checkedList, result);
-                    return true;
+        private void GetCellIntersercion(int cellIndex, HashSet<int> checkedList, HashSet<int> result) {
+            var notChecked = new Queue<int>();
+            notChecked.Enqueue(cellIndex);
+            do {
+                cellIndex = notChecked.Dequeue();
+                if (!checkedList.Contains(cellIndex)) {
+                    result.Add(cellIndex);
+                    checkedList.Add(cellIndex);
+                    AddToQueue(GetPrevCellIndexByX(cellIndex), notChecked);
+                    AddToQueue(GetPrevCellIndexByY(cellIndex), notChecked);
+                    AddToQueue(GetPrevCellIndexByZ(cellIndex), notChecked);
+                    AddToQueue(GetNextCellIndexByX(cellIndex), notChecked);
+                    AddToQueue(GetNextCellIndexByY(cellIndex), notChecked);
+                    AddToQueue(GetNextCellIndexByZ(cellIndex), notChecked);
                 }
-            }
-            return false;
+            } while (notChecked.Count != 0);
         }
+
+        private void AddToQueue(int? index, Queue<int> queue) {
+            if (index.HasValue && _mass[index.Value] == 1)
+                queue.Enqueue(index.Value);
+        }
+
+        #region GetIndex
+
+        private int? GetPrevCellIndexByX(int cellIndex) {
+            if (cellIndex % _x > 0)
+                return cellIndex - 1;
+            return null;
+        }
+
+        private int? GetPrevCellIndexByY(int cellIndex) {
+            if (cellIndex % _xy >= _x)
+                return cellIndex - _x;
+            return null;
+        }
+
+        private int? GetPrevCellIndexByZ(int cellIndex) {
+            if (cellIndex >= _xy)
+                return cellIndex - _xy;
+            return null;
+        }
+
+        private int? GetNextCellIndexByX(int cellIndex) {
+            if ((cellIndex + 1) % _x > 0)
+                return cellIndex + 1;
+            return null;
+        }
+
+        private int? GetNextCellIndexByY(int cellIndex) {
+            if ((cellIndex / _x + 1) % _y > 0)
+                return cellIndex + _x;
+            return null;
+        }
+
+        private int? GetNextCellIndexByZ(int cellIndex) {
+            if (cellIndex < _xyz)
+                return cellIndex + _xy;
+            return null;
+        }
+
+        #endregion
+
     }
 }

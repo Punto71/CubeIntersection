@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace CubeIntersection {
     /// <summary>
@@ -34,6 +35,7 @@ namespace CubeIntersection {
             _intersectWorker = new BackgroundWorker();
             _intersectWorker.DoWork += RunCheckIntersection;
             _intersectWorker.RunWorkerCompleted += CheckIntersectionComplete;
+            _creationWorker.WorkerSupportsCancellation = true;
             _creationWorker.DoWork += RunCubeCreation;
             _creationWorker.RunWorkerCompleted += CubeCreationCompleted;
             RunCubeCreation();
@@ -48,7 +50,7 @@ namespace CubeIntersection {
                 var timer = DateTime.Now;
                 int result = 0;
                 using (var writer = new StreamWriter("out.txt")) {
-                    result = cube.GetCubeIntersection(writer);
+                    result = cube.WriteCubeIntersectionToFile(writer);
                 }
                 var time = DateTime.Now - timer;
                 e.Result = "Время выполнения: " + time + "\r\nКоличество связанных областей: " + result +
@@ -71,10 +73,15 @@ namespace CubeIntersection {
         /// </summary>
         void RunCubeCreation(object sender, DoWorkEventArgs e) {
             var array = e.Argument as int[];
-            if (array != null && array.Length == 3) {
+            var worker = sender as BackgroundWorker;
+            if (worker != null && array != null && array.Length == 3) {
                 var cube = new Cube(array[0], array[1], array[2]);
-                cube.FillCubeRandom();
-                e.Result = cube;
+                cube.FillCubeRandom(worker);
+                if (worker.CancellationPending) {
+                    e.Result = null;
+                    return;
+                } else
+                    e.Result = cube;
             }
         }
 
@@ -105,6 +112,12 @@ namespace CubeIntersection {
         /// </summary>
         private void CubeSettingsChanged(object sender, TextChangedEventArgs e) {
             if (_creationWorker != null) {
+                if (_creationWorker.IsBusy) {
+                    _creationWorker.CancelAsync();
+                }
+                while (_creationWorker.IsBusy)
+                    Application.Current.Dispatcher.Invoke(DispatcherPriority.Background,
+                                          new Action(delegate { }));
                 RunCubeCreation();
             }
         }
